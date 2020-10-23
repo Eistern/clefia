@@ -1,6 +1,3 @@
-#include <stdio.h>
-#include <stdlib.h>
-
 #define W0_8   0xff000000
 #define W8_16  0x00ff0000
 #define W16_24 0x0000ff00
@@ -306,6 +303,7 @@ void decryption_128(unsigned int *p, unsigned int *c, unsigned int *wk, unsigned
     p[3] = t[3] ^ wk[1];
 }
 
+//void decrypt_white(const uint32_t* input_block, const uint32_t* round_keys, const uint32_t* white_keys, uint32_t* result_block);
 void clefia_cbc_128_dec(char * plain, char * cipher, int length, unsigned int* iv, unsigned int *k) {
 
     unsigned int p[4];
@@ -351,7 +349,8 @@ void clefia_cbc_128_dec(char * plain, char * cipher, int length, unsigned int* i
     }
 }
 
-void clefia_cbc_128_enc(char* plain, char * cipher, int length, unsigned int* iv, unsigned int *k) {
+//void crypt_white(const uint32_t* input_block, const uint32_t* round_keys, const uint32_t* white_keys, uint32_t* result_block)
+void crypt_white(char* plain, char * cipher, int length, unsigned int* iv, unsigned int *k) {
 
     unsigned int p[4];
     unsigned int c[4];
@@ -361,7 +360,7 @@ void clefia_cbc_128_enc(char* plain, char * cipher, int length, unsigned int* iv
     int j;
     int i = 0;
 
-    int tam = length;
+    int tam = 128;
 
     if (tam % 16 != 0) {
         for (j = tam % 16; j < 16; j++) {
@@ -409,82 +408,4 @@ void clefia_cbc_128_enc(char* plain, char * cipher, int length, unsigned int* iv
         cipher[i+15] = byte_from_word(c[15/4], 15 % 4);
         i = i + 16;
     }
-}
-
-int main(int argc, char **argv) {
-
-    if (argc < 4) {
-        printf("Usage: %s <input_file> <cifrado> <decrypted version>", argv[0]);
-        exit(1);
-    }
-
-    unsigned int key_128[4] = {0x01234567,
-                               0x89abcdef,
-                               0x01234567,
-                               0x89abcdef};
-
-    unsigned int iv_128[4] = {0x01234567,
-                              0x89abcdef,
-                              0x01234567,
-                              0x89abcdef};
-
-    int tamanio = 300*1024*1024;
-    int blockSize = 16;
-
-    char *data = (char*)malloc(sizeof(char) * tamanio);
-
-    FILE *f;
-    int nread;
-
-    printf("Leyendo input_file\n");
-    f = fopen(argv[1], "r");
-    nread = fread(data, sizeof(char), tamanio, f);
-    fclose(f);
-    printf("Bytes read: %d\n", nread);
-
-
-    int realSize = nread + blockSize - (nread % blockSize);
-    printf("Bytes read: %d\n", realSize);
-    for (int i = nread; i < realSize; i++) data[i] = 0;
-
-
-
-    char *cipher = (char*)malloc(sizeof(char) * tamanio);
-
-    printf("Cifrando...\n");
-    clefia_cbc_128_enc(data, cipher, realSize, iv_128, key_128);
-    printf("Cifrado completo\n");
-
-    printf("Guardando archivo cifrado %s...\n", argv[2]);
-    f = fopen(argv[2], "w");
-    fwrite(cipher, sizeof(char), nread, f);
-    fclose(f);
-    printf("Archivo cifrado satisfactoriamente\n");
-
-
-
-
-
-
-    printf("Leyendo archivo cifrado\n");
-    f = fopen(argv[2], "r");
-    nread = fread(cipher, sizeof(char), tamanio, f);
-    fclose(f);
-
-    realSize = nread + blockSize - (nread % blockSize);
-
-    printf("Decifrando...\n");
-    clefia_cbc_128_dec(data, cipher, realSize, iv_128, key_128);
-    printf("decrypted version completo\n");
-
-    printf("guardando archivo descifrado %s...\n", argv[2]);
-    f = fopen(argv[3], "w");
-    fwrite(data, sizeof(char), nread, f);
-    fclose(f);
-    printf("Archivo descifrado\n");
-
-    free(cipher);
-    free(data);
-
-    return 0;
 }
