@@ -26,21 +26,21 @@ int main(int argc, char** argv) {
     uint32_t input_block[4] = {0, 0, 0, 0};
     uint32_t key_block[4] = {0, 0, 0, 0};
 
+    fread(key_block, sizeof(uint32_t), 4, fp_key);
+
     uint32_t white_keys[4];
     uint32_t round_keys[36];
 
+    generate_keys(key_block, white_keys, round_keys);
+
     uint32_t result_block[4];
 
-    while (!feof(fp_src) && !feof(fp_key)) {
+    while (!feof(fp_src)) {
         memset(input_block, 0, sizeof(uint32_t) * 4);
-        memset(key_block, 0, sizeof(uint32_t) * 4);
         //Set blocks to 0
 
         fread(input_block, sizeof(uint32_t), 4, fp_src);
-        fread(key_block, sizeof(uint32_t), 4, fp_key);
         //Read blocks from file
-
-        generate_keys(key_block, white_keys, round_keys);
 
         if (copy_mode == 0) {
             crypt_white(input_block, round_keys, white_keys, result_block);
