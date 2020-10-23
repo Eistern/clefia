@@ -18,8 +18,8 @@ int main(int argc, char** argv) {
         perror("Can't create resulting file");
     }
 
-    uint32_t input_block[4] = {0x12345678, 0x12345678, 0x12345678, 0x12345678};
-    uint32_t key_block[4] = {0, 0, 0, 0};
+    uint32_t input_block[4] = {0x0, 0x0, 0x0, 0x0};
+    uint32_t key_block[4] = {0x12345678, 0x12345678, 0x12345678, 0x12345678};
 
     uint32_t white_keys[4];
     uint32_t round_keys[36];
@@ -27,7 +27,6 @@ int main(int argc, char** argv) {
     uint32_t result_block[4];
 
     while (!feof(fp_src)) {
-        memcpy(key_block, input_block, sizeof(uint32_t) * 4);
         memset(input_block, 0, sizeof(uint32_t) * 4);
         //Set blocks to 0
 
@@ -37,9 +36,9 @@ int main(int argc, char** argv) {
         generate_keys(key_block, white_keys, round_keys);
 
         crypt_white(input_block, round_keys, white_keys, result_block);
-
-        fwrite(result_block, sizeof(uint32_t), 4, fp_result);
+        memcpy(key_block, result_block, sizeof(uint32_t) * 4);
     }
+    fwrite(result_block, sizeof(uint32_t), 4, fp_result);
 
     fclose(fp_src);
     fclose(fp_result);

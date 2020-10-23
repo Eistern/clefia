@@ -1,3 +1,5 @@
+#include <stdint.h>
+
 #define W0_8   0xff000000
 #define W8_16  0x00ff0000
 #define W16_24 0x0000ff00
@@ -202,7 +204,7 @@ void sigma(unsigned int *x, unsigned int* y) {
     y[3] = ((x[2] & W25_31) << 25) | ((x[3] & W0_24) >> 7);
 }
 
-void key_scheduling_128(unsigned int *k, unsigned int *wk, unsigned int *rk) {
+void generate_keys(uint32_t *key_input, unsigned int *white_keys, unsigned int *round_keys) {
 
     unsigned int y[4];
     unsigned int l[4];
@@ -210,17 +212,17 @@ void key_scheduling_128(unsigned int *k, unsigned int *wk, unsigned int *rk) {
     int i;
 
     /* step 1 */
-    gfn4(12, con_128, k, y);
+    gfn4(12, con_128, key_input, y);
     l[0] = y[0];
     l[1] = y[1];
     l[2] = y[2];
     l[3] = y[3];
 
     /* step 2 */
-    wk[0] = k[0];
-    wk[1] = k[1];
-    wk[2] = k[2];
-    wk[3] = k[3];
+    white_keys[0] = key_input[0];
+    white_keys[1] = key_input[1];
+    white_keys[2] = key_input[2];
+    white_keys[3] = key_input[3];
 
     /* step 3 */
     for (i = 0; i < 9; i++) {
@@ -236,23 +238,23 @@ void key_scheduling_128(unsigned int *k, unsigned int *wk, unsigned int *rk) {
         l[3] = y[3];
 
         if (i % 2 == 1) {
-            t[0] = t[0] ^ k[0];
-            t[1] = t[1] ^ k[1];
-            t[2] = t[2] ^ k[2];
-            t[3] = t[3] ^ k[3];
+            t[0] = t[0] ^ key_input[0];
+            t[1] = t[1] ^ key_input[1];
+            t[2] = t[2] ^ key_input[2];
+            t[3] = t[3] ^ key_input[3];
         }
 
-        rk[4*i] = t[0];
-        rk[4*i+1] = t[1];
-        rk[4*i+2] = t[2];
-        rk[4*i+3] = t[3];
+        round_keys[4 * i] = t[0];
+        round_keys[4 * i + 1] = t[1];
+        round_keys[4 * i + 2] = t[2];
+        round_keys[4 * i + 3] = t[3];
     }
 }
 
-void encryption_128(unsigned int *p, unsigned int *c, unsigned int *wk, unsigned int* rk) {
+void encryption_128(uint32_t* p, uint32_t* c, uint32_t* wk, uint32_t* rk) {
 
-    unsigned int t[4];
-    unsigned int y[4];
+    uint32_t t[4];
+    uint32_t y[4];
 
 
     /* step 1 */
@@ -277,10 +279,10 @@ void encryption_128(unsigned int *p, unsigned int *c, unsigned int *wk, unsigned
     c[3] = t[3] ^ wk[3];
 }
 
-void decryption_128(unsigned int *p, unsigned int *c, unsigned int *wk, unsigned int* rk) {
+void decryption_128(uint32_t* p, uint32_t* c, uint32_t* wk, uint32_t* rk) {
 
-    unsigned int t[4];
-    unsigned int y[4];
+    uint32_t t[4];
+    uint32_t y[4];
 
 
     /* step 1 */
@@ -306,12 +308,12 @@ void decryption_128(unsigned int *p, unsigned int *c, unsigned int *wk, unsigned
 //void decrypt_white(const uint32_t* input_block, const uint32_t* round_keys, const uint32_t* white_keys, uint32_t* result_block);
 void clefia_cbc_128_dec(char * plain, char * cipher, int length, unsigned int* iv, unsigned int *k) {
 
-    unsigned int p[4];
-    unsigned int c[4];
-    unsigned int aux[4];
+    uint32_t p[4];
+    uint32_t c[4];
+    uint32_t aux[4];
 
-    unsigned int wk[4];
-    unsigned int rk[36];
+    uint32_t wk[4];
+    uint32_t rk[36];
 
 
     int j;
@@ -329,7 +331,7 @@ void clefia_cbc_128_dec(char * plain, char * cipher, int length, unsigned int* i
         aux[j] = iv[j];
     }
 
-    key_scheduling_128(k, wk, rk);
+    generate_keys(k, wk, rk);
 
     while (i < tam) {
         for (j = 0; j < 4; j++) {
@@ -373,7 +375,7 @@ void crypt_white(char* plain, char * cipher, int length, unsigned int* iv, unsig
     c[2] = iv[2];
     c[3] = iv[3];
 
-    key_scheduling_128(k, wk, rk);
+    generate_keys(k, wk, rk);
 
     while (i < tam) {
 
