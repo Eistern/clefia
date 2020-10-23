@@ -1,6 +1,4 @@
-#include <stdio.h>
 #include <stdint.h>
-#include <string.h>
 #include "clefia.h"
 
 uint8_t s0[16][16] = {
@@ -39,20 +37,6 @@ uint8_t s1[16][16] = {
         {0xf8, 0x5f, 0xab, 0xf1, 0x1b, 0x42, 0x81, 0xd6, 0xbe, 0x44, 0x29, 0xa6, 0x57, 0xb9, 0xaf, 0xf2},
         {0xd4, 0x75, 0x66, 0xbb, 0x68, 0x9f, 0x50, 0x02, 0x01, 0x3c, 0x7f, 0x8d, 0x1a, 0x88, 0xbd, 0xac},
         {0xf7, 0xe4, 0x79, 0x96, 0xa2, 0xfc, 0x6d, 0xb2, 0x6b, 0x03, 0xe1, 0x2e, 0x7d, 0x14, 0x95, 0x1d}
-};
-
-uint8_t m0[4][4] = {
-        {0x01, 0x02, 0x04, 0x06},
-        {0x02, 0x01, 0x06, 0x04},
-        {0x04, 0x06, 0x01, 0x02},
-        {0x06, 0x04, 0x02, 0x01}
-};
-
-uint8_t m1[4][4] = {
-        {0x01, 0x08, 0x02, 0x0a},
-        {0x08, 0x01, 0x0a, 0x02},
-        {0x02, 0x0a, 0x01, 0x08},
-        {0x0a, 0x02, 0x08, 0x01}
 };
 
 uint32_t constants[60] = {
@@ -103,13 +87,31 @@ uint8_t s1_block(uint8_t input) {
     return s1[y][x];
 }
 
-void apply_4_4_matrix(const uint8_t matrix[4][4], const uint8_t vector[4], uint8_t result[4]) {
-    for (int i = 0; i < 4; ++i) {
-        result[i] = 0;
-        for (int j = 0; j < 4; ++j) {
-            result[i] += matrix[i][j] * vector[j];
-        }
+uint8_t multiply_by_2(uint8_t x) {
+    // multiplication by 0x02 over GF(2^8) (p(x) = '11d')
+    if (x & 0x80u) {
+        x ^= 0x0eu;
     }
+    return ((uint8_t)(x << 1u) | (uint8_t)(x >> 7u));
+}
+
+#define multiply_by_4(_x) (uint8_t)(multiply_by_2(multiply_by_2((_x))))
+#define multiply_by_6(_x) (uint8_t)(multiply_by_2((_x)) ^ multiply_by_4((_x)))
+#define multiply_by_8(_x) (uint8_t)(multiply_by_2(multiply_by_4((_x))))
+#define multiply_by_a(_x) (uint8_t)(multiply_by_2((_x)) ^ multiply_by_8((_x)))
+
+void apply_m0_matrix(const uint8_t vector[4], uint8_t result[4]) {
+    result[0] = vector[0] ^ multiply_by_2(vector[1]) ^ multiply_by_4(vector[2]) ^ multiply_by_6(vector[3]);
+    result[1] = multiply_by_2(vector[0]) ^ vector[1] ^ multiply_by_6(vector[2]) ^ multiply_by_4(vector[3]);
+    result[2] = multiply_by_4(vector[0]) ^ multiply_by_6(vector[1]) ^ vector[2] ^ multiply_by_2(vector[3]);
+    result[3] = multiply_by_6(vector[0]) ^ multiply_by_4(vector[1]) ^ multiply_by_2(vector[2]) ^ vector[3];
+}
+
+void apply_m1_matrix(const uint8_t vector[4], uint8_t result[4]) {
+    result[0] = vector[0] ^ multiply_by_8(vector[1]) ^ multiply_by_2(vector[2]) ^ multiply_by_a(vector[3]);
+    result[1] = multiply_by_8(vector[0]) ^ vector[1] ^ multiply_by_a(vector[2]) ^ multiply_by_2(vector[3]);
+    result[2] = multiply_by_2(vector[0]) ^ multiply_by_a(vector[1]) ^ vector[2] ^ multiply_by_8(vector[3]);
+    result[3] = multiply_by_a(vector[0]) ^ multiply_by_2(vector[1]) ^ multiply_by_8(vector[2]) ^ vector[3];
 }
 
 uint32_t f0_func(const uint32_t input, const uint32_t key) {
@@ -124,7 +126,7 @@ uint32_t f0_func(const uint32_t input, const uint32_t key) {
         }
     }
     uint8_t result_split[4];
-    apply_4_4_matrix(m0, coded_split, result_split);
+    apply_m0_matrix(coded_split, result_split);
     return concat_8s_in_32(result_split);
 }
 
@@ -140,7 +142,7 @@ uint32_t f1_func(const uint32_t input, const uint32_t key) {
         }
     }
     uint8_t result_split[4];
-    apply_4_4_matrix(m1, coded_split, result_split);
+    apply_m1_matrix(coded_split, result_split);
     return concat_8s_in_32(result_split);
 }
 
@@ -156,10 +158,10 @@ void crypt(uint32_t rounds, const uint32_t *input_block, const uint32_t *round_k
         temp[2] = temp[3];
         temp[3] = swap_buff;
     }
-    result_block[0] = temp[0];
-    result_block[1] = temp[1];
-    result_block[2] = temp[2];
-    result_block[3] = temp[3];
+    result_block[0] = temp[3];
+    result_block[1] = temp[0];
+    result_block[2] = temp[1];
+    result_block[3] = temp[2];
 }
 
 void decrypt(uint32_t rounds, const uint32_t *input_block, const uint32_t *round_keys, uint32_t *result_block) {
@@ -174,10 +176,10 @@ void decrypt(uint32_t rounds, const uint32_t *input_block, const uint32_t *round
         temp[1] = temp[0];
         temp[0] = swap_buff;
     }
-    result_block[0] = temp[0];
-    result_block[1] = temp[1];
-    result_block[2] = temp[2];
-    result_block[3] = temp[3];
+    result_block[0] = temp[1];
+    result_block[1] = temp[2];
+    result_block[2] = temp[3];
+    result_block[3] = temp[0];
 }
 
 void crypt_white(const uint32_t* input_block, const uint32_t* round_keys, const uint32_t* white_keys, uint32_t* result_block) {

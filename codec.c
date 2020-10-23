@@ -3,12 +3,26 @@
 #include <stdint.h>
 #include "clefia.h"
 
+int32_t fsize(FILE *fp){
+    long prev = ftell(fp);
+    fseek(fp, 0L, SEEK_END);
+    long sz = ftell(fp);
+    fseek(fp, prev, SEEK_SET); //go back to where we were
+    return sz;
+}
+
+
 int main(int argc, char** argv) {
     if (argc < 4) {
         perror("Usage: ./cliefia <src_file> <key_file> <mode: c/d>");
         return 1;
     }
-    int copy_mode = strcmp(argv[3], "c");
+    int code_mode = strcmp(argv[3], "c");
+    if (code_mode == 0) {
+        printf("Coding %s\n", argv[1]);
+    } else {
+        printf("Decoding %s\n", argv[1]);
+    }
 
     FILE* fp_src = fopen(argv[1], "rb");
     if (fp_src == NULL) {
@@ -35,14 +49,19 @@ int main(int argc, char** argv) {
 
     uint32_t result_block[4];
 
+    printf("Size of input file: %d\n", fsize(fp_src) * 8);
     while (!feof(fp_src)) {
         memset(input_block, 0, sizeof(uint32_t) * 4);
         //Set blocks to 0
 
-        fread(input_block, sizeof(uint32_t), 4, fp_src);
+        size_t read = fread(input_block, sizeof(uint32_t), 4, fp_src);
+        if (read == 0) {
+            continue;
+        }
+        printf("Read: %d\n", read * sizeof(uint32_t) * 8);
         //Read blocks from file
 
-        if (copy_mode == 0) {
+        if (code_mode == 0) {
             crypt_white(input_block, round_keys, white_keys, result_block);
         } else {
             decrypt_white(input_block, round_keys, white_keys, result_block);
