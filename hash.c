@@ -30,8 +30,11 @@ int main(int argc, char** argv) {
         memset(input_block, 0, sizeof(uint32_t) * 4);
         //Set blocks to 0
 
-        fread(input_block, sizeof(uint32_t), 4, fp_src);
+        size_t read = fread(input_block, sizeof(uint32_t), 4, fp_src);
         //Read blocks from file
+        if (read == 0) {
+            continue;
+        }
 
         generate_keys(key_block, white_keys, round_keys);
 
