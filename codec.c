@@ -58,7 +58,7 @@ int main(int argc, char** argv) {
         if (read == 0) {
             continue;
         }
-        printf("Read: %du\n", read * sizeof(uint32_t) * 8);
+        printf("Read: %lu\n", read * sizeof(uint32_t) * 8);
         //Read blocks from file
 
         if (code_mode == 0) {
