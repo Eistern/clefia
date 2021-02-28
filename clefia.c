@@ -212,7 +212,7 @@ void self_swap(uint32_t* buff) {
     buff[3] = swap_result[3];
 }
 
-void generate_keys(uint32_t* key_input, uint32_t* white_keys, uint32_t* round_keys) {
+void generate_keys(const uint32_t* key_input, uint32_t* white_keys, uint32_t* round_keys) {
     white_keys[0] = key_input[0];
     white_keys[1] = key_input[1];
     white_keys[2] = key_input[2];

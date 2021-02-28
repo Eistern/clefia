@@ -7,7 +7,7 @@
  * @param white_keys - resulting whitened keys for crypt/decrypt function. Requires 4 * 32 bit buffer
  * @param round_keys - resulting round keys for crypt/decrypt function. Requires 36 * 32 bit buffer
  */
-void generate_keys(uint32_t* key_input, uint32_t* white_keys, uint32_t* round_keys);
+void generate_keys(const uint32_t* key_input, uint32_t* white_keys, uint32_t* round_keys);
 
 /**
  * Encryption function with white keys. Keys returned from generate_keys call will always be valid for this call
